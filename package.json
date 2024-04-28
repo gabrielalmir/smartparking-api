@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
     "postgres": "^3.4.4",
     "zod": "^3.23.4"

@@ -1,7 +1,5 @@
+import 'dotenv/config'
 import zod from 'zod'
-
-// Load environment variables
-process.loadEnvFile()
 
 // Define environment schema
 const envSchema = zod.object({
