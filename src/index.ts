@@ -5,56 +5,49 @@ import { env } from "./config/env";
 
 const app = fastify()
 
-app.get("/sensor", async (request) => {
-    return await sql`SELECT * FROM sensor`
+app.get("/movsensor", async () => {
+    return await sql`SELECT * FROM mov_sensor`
 })
 
-app.get("/sensor/:id", async (request) => {
+app.get("/movsensor/:id", async (request) => {
     const schema = zod.object({
         id: zod.string()
     })
 
     const { id } = schema.parse(request.params)
-    return await sql`SELECT * FROM sensor WHERE sensor_id = ${id}`
+    return await sql`SELECT * FROM mov_sensor WHERE sensor_codigo = ${id}`
 })
 
-app.post("/sensor", async (request, reply) => {
+app.post("/movsensor", async (request, reply) => {
     const schema = zod.object({
         sensor_codigo: zod.string(),
-        sensor_dtEntrada: zod.string(),
-        sensor_hrEntrada: zod.string(),
-        sensor_status: zod.boolean()
     })
 
-    const { sensor_codigo, sensor_dtEntrada, sensor_hrEntrada, sensor_status } = schema.parse(request.body)
+    const { sensor_codigo } = schema.parse(request.body)
 
-    await sql`
-        INSERT INTO sensor (sensor_codigo, sensor_dtEntrada, sensor_hrEntrada, sensor_status)
-        VALUES (${sensor_codigo}, ${sensor_dtEntrada}, ${sensor_hrEntrada}, ${sensor_status})
+    const result = await sql`
+        INSERT INTO sensor (sensor_codigo)
+        VALUES (${sensor_codigo})]
+        returning *
     `
 
-    return reply.status(201).send()
+    return reply.send(result)
 })
 
-app.put("/sensor/:id", async (request, reply) => {
+app.put("/movsensor/:id", async (request, reply) => {
     const schema = zod.object({
         id: zod.string(),
         sensor_codigo: zod.string(),
-        sensor_dtEntrada: zod.string(),
-        sensor_hrEntrada: zod.string(),
-        sensor_hrSaida: zod.string(),
-        sensor_status: zod.boolean()
+        sensor_dthora_saida: zod.string().datetime(),
     })
 
-    const { id } = schema.parse(request.params)
-
     const body = schema.parse(request.body)
-    const { sensor_codigo, sensor_dtEntrada, sensor_hrEntrada, sensor_hrSaida, sensor_status } = body
+    const { sensor_dthora_saida, sensor_codigo, id } = body
 
     await sql`
-        UPDATE sensor
-        SET sensor_codigo = ${sensor_codigo}, sensor_dtEntrada = ${sensor_dtEntrada}, sensor_hrEntrada = ${sensor_hrEntrada}, sensor_status = ${sensor_status}, sensor_hrSaida = ${sensor_hrSaida}
-        WHERE sensor_id = ${id}
+        UPDATE mov_sensor
+        SET sensor_status = false, sensor_dthora_saida = ${sensor_dthora_saida}
+        WHERE sensormov_id = ${id} and sensor_codigo = ${sensor_codigo}
     `
 
     return reply.status(204).send()
