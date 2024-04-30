@@ -60,7 +60,7 @@ app.put("/movsensor", async (request, reply) => {
 
     await sql`
         UPDATE mov_sensor
-        SET sensormov_status = false, sensor_dthora_saida = ${sensor_dthora_saida}
+        SET sensormov_status = false, sensormov_dthora_saida = ${sensor_dthora_saida}
         WHERE sensormov_id = ${id}
     `
 
