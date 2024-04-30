@@ -53,7 +53,7 @@ app.put("/movsensor", async (request, reply) => {
     const schema = zod.object({
         id: zod.string(),
         sensor_codigo: zod.string(),
-        sensor_dthora_saida: zod.string().datetime(),
+        sensor_dthora_saida: zod.string(),
     })
 
     const body = schema.parse(request.body)
