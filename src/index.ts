@@ -41,7 +41,7 @@ app.post("/movsensor", async (request, reply) => {
     const { sensor_codigo } = schema.parse(request.body)
 
     const result = await sql`
-        INSERT INTO sensor (sensor_codigo)
+        INSERT INTO mov_sensor (sensor_codigo)
         VALUES (${sensor_codigo})
         returning *
     `
