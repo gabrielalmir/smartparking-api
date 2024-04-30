@@ -15,7 +15,13 @@ app.get("/movsensor/sensor/:id", async (request) => {
 })
 
 app.get("/movsensor", async () => {
-    return await sql`SELECT * FROM mov_sensor`
+    const results = await sql`SELECT * FROM mov_sensor`
+
+    if (!results.length) {
+        return []
+    }
+
+    return results
 })
 
 app.get("/movsensor/:id", async (request) => {
