@@ -52,7 +52,7 @@ app.post("/movsensor", async (request, reply) => {
 app.put("/movsensor", async (request, reply) => {
     const schema = zod.object({
         id: zod.string().or(zod.number()),
-        sensor_dthora_saida: zod.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/, {
+        sensor_dthora_saida: zod.string().regex(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/, {
             message: "Data e hora de saída inválida, formato esperado: yyyy-MM-ddTHH:mm:ss"
         }),
     })
