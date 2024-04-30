@@ -52,7 +52,6 @@ app.post("/movsensor", async (request, reply) => {
 app.put("/movsensor", async (request, reply) => {
     const schema = zod.object({
         id: zod.string(),
-        sensor_codigo: zod.string(),
         sensor_dthora_saida: zod.string(),
     })
 
@@ -61,8 +60,8 @@ app.put("/movsensor", async (request, reply) => {
 
     await sql`
         UPDATE mov_sensor
-        SET sensor_status = false, sensor_dthora_saida = ${sensor_dthora_saida}
-        WHERE sensormov_id = ${id} and sensor_codigo = ${sensor_codigo}
+        SET sensormov_status = false, sensor_dthora_saida = ${sensor_dthora_saida}
+        WHERE sensormov_id = ${id}
     `
 
     return reply.status(204).send()
