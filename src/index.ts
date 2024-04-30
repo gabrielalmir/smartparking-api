@@ -49,7 +49,7 @@ app.post("/movsensor", async (request, reply) => {
     return reply.send(result)
 })
 
-app.put("/movsensor/:id", async (request, reply) => {
+app.put("/movsensor", async (request, reply) => {
     const schema = zod.object({
         id: zod.string(),
         sensor_codigo: zod.string(),
