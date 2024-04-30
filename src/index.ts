@@ -5,6 +5,15 @@ import { env } from "./config/env";
 
 const app = fastify()
 
+app.get("/movsensor/sensor/:id", async (request) => {
+    const schema = zod.object({
+        id: zod.string()
+    })
+
+    const { id } = schema.parse(request.params)
+    return await sql`SELECT * FROM mov_sensor WHERE sensor_codigo = ${id}`
+})
+
 app.get("/movsensor", async () => {
     return await sql`SELECT * FROM mov_sensor`
 })
@@ -15,7 +24,7 @@ app.get("/movsensor/:id", async (request) => {
     })
 
     const { id } = schema.parse(request.params)
-    return await sql`SELECT * FROM mov_sensor WHERE sensor_codigo = ${id}`
+    return await sql`SELECT * FROM mov_sensor WHERE sensormov_id = ${id}`
 })
 
 app.post("/movsensor", async (request, reply) => {
