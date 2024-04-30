@@ -42,7 +42,7 @@ app.post("/movsensor", async (request, reply) => {
 
     const result = await sql`
         INSERT INTO sensor (sensor_codigo)
-        VALUES (${sensor_codigo})]
+        VALUES (${sensor_codigo})
         returning *
     `
 
