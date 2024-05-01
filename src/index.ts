@@ -40,9 +40,22 @@ app.post("/movsensor", async (request, reply) => {
 
     const { sensor_codigo } = schema.parse(request.body)
 
+    // Obter qual é o sensor id para o sensor_codigo
+    const sensor = await sql`
+        SELECT TOP 1 sensor_id FROM sensor WHERE sensor_codigo = ${sensor_codigo}
+    `
+
+    if (!sensor.length) {
+        return reply.status(404).send({
+            message: "Sensor não encontrado"
+        })
+    }
+
+    const sensor_id = sensor[0].sensor_id
+
     const result = await sql`
         INSERT INTO mov_sensor (sensor_codigo)
-        VALUES (${sensor_codigo})
+        VALUES (${sensor_id})
         returning *;
     `
 
