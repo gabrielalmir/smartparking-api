@@ -38,6 +38,13 @@ app.post('/sensors', async (request, reply) => {
 
     const { name, sensor, status, latitude, longitude } = schema.parse(request.body)
 
+    // check if sensor already exists
+    const existingSensor = await prisma.sensor.findUnique({ where: { sensor } })
+
+    if (existingSensor) {
+        return reply.status(409).send({ message: 'Sensor already exists' })
+    }
+
     // Save to database
     const record = await prisma.sensor.create({ data: { name, sensor, status, latitude, longitude } })
 
