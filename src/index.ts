@@ -1,86 +1,65 @@
 import fastify from "fastify";
-import zod from "zod";
-import sql from "./config/db";
+import { z } from "zod";
+import { prisma } from "./config/db";
 import { env } from "./config/env";
 
 const app = fastify()
 
-app.get("/movsensor/sensor/:id", async (request) => {
-    const schema = zod.object({
-        id: zod.string().or(zod.number())
-    })
-
-    const { id } = schema.parse(request.params)
-    return await sql`SELECT * FROM mov_sensor WHERE sensor_codigo = ${id}`
+// Sensor routes
+app.get('/sensors', async () => {
+    const sensors = prisma.sensor.findMany()
+    return sensors
 })
 
-app.get("/movsensor", async () => {
-    const results = await sql`SELECT * FROM mov_sensor`
+app.get('/sensors/:sensor', async (request, reply) => {
+    const schema = z.object({
+        sensor: z.string(),
+    })
 
-    if (!results.length) {
-        return []
+    const { sensor } = schema.parse(request.params)
+
+    const record = await prisma.sensor.findUnique({ where: { sensor } })
+
+    if (!record) {
+        return reply.status(404).send()
     }
 
-    return results
+    return record
 })
 
-app.get("/movsensor/:id", async (request) => {
-    const schema = zod.object({
-        id: zod.string().or(zod.number())
+app.post('/sensors', async (request, reply) => {
+    const schema = z.object({
+        name: z.string(),
+        sensor: z.string(),
+        status: z.boolean(),
+        latitude: z.number(),
+        longitude: z.number(),
     })
 
-    const { id } = schema.parse(request.params)
-    return await sql`SELECT * FROM mov_sensor WHERE sensormov_id = ${id}`
+    const { name, sensor, status, latitude, longitude } = schema.parse(request.body)
+
+    // Save to database
+    const record = await prisma.sensor.create({ data: { name, sensor, status, latitude, longitude } })
+
+    return reply.status(201).send(record)
 })
 
-app.post("/movsensor", async (request, reply) => {
-    const schema = zod.object({
-        sensor_codigo: zod.string().or(zod.number()),
+app.put('/sensors/:sensor', async (request, reply) => {
+    const schema = z.object({
+        status: z.boolean(),
     })
 
-    const { sensor_codigo } = schema.parse(request.body)
+    const { sensor } = z.object({ sensor: z.string() }).parse(request.params)
+    const { status } = schema.parse(request.body)
 
-    // Obter qual é o sensor id para o sensor_codigo
-    const sensor = await sql`
-        SELECT TOP 1 sensor_id FROM sensor WHERE sensor_codigo = ${sensor_codigo}
-    `
+    // Update to database
+    const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
 
-    if (!sensor.length) {
-        return reply.status(404).send({
-            message: "Sensor não encontrado"
-        })
+    if (!record) {
+        return reply.status(404).send()
     }
 
-    const sensor_id = sensor[0].sensor_id
-
-    const result = await sql`
-        INSERT INTO mov_sensor (sensor_codigo)
-        VALUES (${sensor_id})
-        returning *;
-    `
-
-    return reply.send(result)
-})
-
-app.put("/movsensor", async (request, reply) => {
-    const schema = zod.object({
-        id: zod.string().or(zod.number()),
-        sensor_dthora_saida: zod.string().regex(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/, {
-            message: "Data e hora de saída inválida, formato esperado: yyyy-MM-ddTHH:mm:ss"
-        }),
-    })
-
-    const body = schema.parse(request.body)
-    const { sensor_dthora_saida, id } = body
-
-    const result = await sql`
-        UPDATE mov_sensor
-        SET sensormov_status = false, sensormov_dthora_saida = ${sensor_dthora_saida}
-        WHERE sensormov_id = ${id}
-        returning *;
-    `
-
-    return reply.status(200).send(result)
+    return record
 })
 
 app.listen({ port: +env.PORT }, (err, address) => {

@@ -5,11 +5,7 @@ import zod from 'zod'
 const envSchema = zod.object({
     NODE_ENV: zod.string().default('development'),
     PORT: zod.string().default('8080'),
-    DB_HOST: zod.string().default('localhost'),
-    DB_PORT: zod.string().default('5432'),
-    DB_USER: zod.string().default('postgres'),
-    DB_PASS: zod.string().default('postgres'),
-    DB_NAME: zod.string().default('postgres'),
+    DATABASE_URL: zod.string().url(),
 })
 
 export type Env = zod.infer<typeof envSchema>
