@@ -9,6 +9,12 @@ const app = fastify()
 
 app.register(cors)
 
+// log middleware
+
+app.addHook('onRequest', async (request, reply) => {
+    console.log('Request received:', request.method, request.url)
+})
+
 // Sensor routes
 app.get('/sensors', async () => {
     const sensors = prisma.sensor.findMany()
@@ -63,6 +69,8 @@ app.put('/sensors/:sensor', async (request, reply) => {
     const { sensor } = z.object({ sensor: z.string() }).parse(request.params)
     const { status } = schema.parse(request.body)
 
+    console.log(sensor, status)
+
     // Update to database
     const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
 
@@ -70,10 +78,12 @@ app.put('/sensors/:sensor', async (request, reply) => {
         return reply.status(404).send()
     }
 
+    console.log(record)
+
     return record
 })
 
-app.listen({ port: +env.PORT }, (err, address) => {
+app.listen({ port: +env.PORT, host: '0.0.0.0' }, (err, address) => {
     if (err) {
         console.error(err)
         process.exit(1)
