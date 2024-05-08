@@ -1,9 +1,13 @@
+import cors from "@fastify/cors";
 import fastify from "fastify";
 import { z } from "zod";
+
 import { prisma } from "./config/db";
 import { env } from "./config/env";
 
 const app = fastify()
+
+app.register(cors)
 
 // Sensor routes
 app.get('/sensors', async () => {
