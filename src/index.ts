@@ -10,7 +10,6 @@ const app = fastify()
 app.register(cors)
 
 // log middleware
-
 app.addHook('onRequest', async (request, reply) => {
     console.log('Request received:', request.method, request.url)
 })
@@ -69,16 +68,12 @@ app.put('/sensors/:sensor', async (request, reply) => {
     const { sensor } = z.object({ sensor: z.string() }).parse(request.params)
     const { status } = schema.parse(request.body)
 
-    console.log(sensor, status)
-
     // Update to database
     const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
 
     if (!record) {
         return reply.status(404).send()
     }
-
-    console.log(record)
 
     return record
 })
