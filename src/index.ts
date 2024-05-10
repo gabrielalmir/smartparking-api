@@ -1,88 +1,53 @@
-import cors from "@fastify/cors";
-import fastify from "fastify";
-import { z } from "zod";
+import mqtt from 'mqtt'
+import { z } from 'zod'
+import { prisma } from './config/db'
+import { env } from './config/env'
 
-import { prisma } from "./config/db";
-import { env } from "./config/env";
+const client = mqtt.connect(env.MQTT_URL)
+const topic = 'smartparking-iot'
 
-const app = fastify()
-
-app.register(cors)
-
-// log middleware
-app.addHook('onRequest', async (request, reply) => {
-    console.log('Request received:', request.method, request.url)
+client.on('connect', () => {
+    console.log('Connected to MQTT broker')
+    console.log('*-'.repeat(20))
+    client.subscribe(topic)
 })
 
-// Sensor routes
-app.get('/sensors', async () => {
-    const sensors = prisma.sensor.findMany()
-    return sensors
+client.on('message', async (topic, message) => {
+    try {
+        await onBrokerMessage(topic, message)
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            console.error('Error processing message:', error.errors.map((e) => e.message))
+        }
+        else if (error instanceof SyntaxError) {
+            console.error('Error processing message:', 'Invalid JSON format')
+        } else {
+            console.error('Error processing message:', error)
+        }
+    }
 })
 
-app.get('/sensors/:sensor', async (request, reply) => {
+async function onBrokerMessage(topic: string, message: Buffer) {
+    console.log('Received message:', message.toString(), 'on topic:', topic)
+
     const schema = z.object({
-        sensor: z.string(),
+        sensor: z.string({ message: 'Invalid sensor' }),
+        status: z.boolean({ message: 'Invalid status' }).or(z.number().transform((v) => !!v)),
     })
 
-    const { sensor } = schema.parse(request.params)
+    const { sensor, status } = schema.parse(JSON.parse(message.toString()))
 
-    const record = await prisma.sensor.findUnique({ where: { sensor } })
-
-    if (!record) {
-        return reply.status(404).send()
-    }
-
-    return record
-})
-
-app.post('/sensors', async (request, reply) => {
-    const schema = z.object({
-        name: z.string(),
-        sensor: z.string(),
-        status: z.boolean(),
-        latitude: z.number(),
-        longitude: z.number(),
-    })
-
-    const { name, sensor, status, latitude, longitude } = schema.parse(request.body)
-
-    // check if sensor already exists
-    const existingSensor = await prisma.sensor.findUnique({ where: { sensor } })
-
-    if (existingSensor) {
-        return reply.status(409).send({ message: 'Sensor already exists' })
-    }
+    // Log parsed message
+    console.log('Message parsed:')
+    console.log('Sensor:', sensor)
+    console.log('Status:', status)
+    console.log('*-'.repeat(20))
 
     // Save to database
-    const record = await prisma.sensor.create({ data: { name, sensor, status, latitude, longitude } })
+    await prisma.sensor.update({ where: { sensor }, data: { status } })
 
-    return reply.status(201).send(record)
-})
-
-app.put('/sensors/:sensor', async (request, reply) => {
-    const schema = z.object({
-        status: z.boolean(),
-    })
-
-    const { sensor } = z.object({ sensor: z.string() }).parse(request.params)
-    const { status } = schema.parse(request.body)
-
-    // Update to database
-    const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
-
-    if (!record) {
-        return reply.status(404).send()
-    }
-
-    return record
-})
-
-app.listen({ port: +env.PORT, host: '0.0.0.0' }, (err, address) => {
-    if (err) {
-        console.error(err)
-        process.exit(1)
-    }
-
-    console.log(`Server listening at ${address}`)
-})
+    // Show all sensors
+    const sensors = await prisma.sensor.findMany()
+    // show only the sensor and status
+    console.table(sensors.map(({ sensor, status }) => ({ sensor, status })))
+}
