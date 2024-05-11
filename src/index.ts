@@ -5,7 +5,7 @@ import { env } from './config/env'
 
 const client = mqtt.connect(env.MQTT_URL)
 const topic = env.MQTT_TOPIC
-const messageInterval = 5000
+const messageInterval = env.MESSAGE_INTERVAL
 
 interface BrokerMessage {
     topic: string

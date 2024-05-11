@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Sensor {
-  id        String   @id @default(cuid()) @map("id")
-  name      String   @map("nome")
-  sensor    String   @map("sensor") @unique
-  status    Boolean  @map("status")
-  createdAt DateTime @default(now()) @map("criado_em")
-  updatedAt DateTime @updatedAt @map("atualizado_em")
-  latitude  Float    @map("latitude")
-  longitude Float    @map("longitude")
+  id             Int              @id @default(autoincrement()) @map("id")
+  name           String           @map("nome")
+  sensor         String           @unique @map("sensor")
+  status         Boolean          @map("status")
+  createdAt      DateTime         @default(now()) @map("criado_em")
+  updatedAt      DateTime         @updatedAt @map("atualizado_em")
+  latitude       Float            @map("latitude")
+  longitude      Float            @map("longitude")
 
   @@map("sensores")
 }
+
