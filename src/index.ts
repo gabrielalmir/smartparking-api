@@ -57,7 +57,7 @@ async function processBrokerData(brokerMessage: BrokerMessage) {
 
     // Save sensor movement
     const sensorId = sensorRecord.id
-    await saveSensorMovement({ id: sensorId, status, sensor })
+    await saveSensorMovement({ id: sensorId, status })
 }
 
 async function saveSensorData(sensor: string, status: boolean) {
@@ -65,7 +65,7 @@ async function saveSensorData(sensor: string, status: boolean) {
     return record
 }
 
-async function saveSensorMovement({ id, status, sensor }: { id: number, status: boolean, sensor: string }) {
+async function saveSensorMovement({ id, status }: { id: number, status: boolean }) {
     // Check if last record was an entry
     const lastRecord = await prisma.sensorMov.findFirst({
         where: { sensorId: id, completed: false },
