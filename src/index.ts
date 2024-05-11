@@ -4,7 +4,16 @@ import { prisma } from './config/db'
 import { env } from './config/env'
 
 const client = mqtt.connect(env.MQTT_URL)
-const topic = 'smartparking-iot'
+const topic = env.MQTT_TOPIC
+const messageInterval = 5000
+
+interface BrokerMessage {
+    topic: string
+    message: Buffer
+    timestamp: Date
+}
+
+const queue = new Map<string, BrokerMessage>()
 
 client.on('connect', () => {
     console.log('Connected to MQTT broker')
@@ -14,7 +23,7 @@ client.on('connect', () => {
 
 client.on('message', async (topic, message) => {
     try {
-        await onBrokerMessage(topic, message)
+        addMessageToQueue({ topic, message, timestamp: new Date() })
     } catch (error) {
         if (error instanceof z.ZodError) {
             console.error('Error processing message:', error.errors.map((e) => e.message))
@@ -27,8 +36,13 @@ client.on('message', async (topic, message) => {
     }
 })
 
-async function onBrokerMessage(topic: string, message: Buffer) {
-    console.log('Received message:', message.toString(), 'on topic:', topic)
+function addMessageToQueue(brokerMessage: BrokerMessage) {
+    const { topic } = brokerMessage
+    queue.set(topic, brokerMessage)
+}
+
+async function processBrokerData(brokerMessage: BrokerMessage) {
+    const { topic, message, timestamp } = brokerMessage
 
     const schema = z.object({
         sensor: z.string({ message: 'Invalid sensor' }),
@@ -38,16 +52,18 @@ async function onBrokerMessage(topic: string, message: Buffer) {
     const { sensor, status } = schema.parse(JSON.parse(message.toString()))
 
     // Log parsed message
-    console.log('Message parsed:')
-    console.log('Sensor:', sensor)
-    console.log('Status:', status)
     console.log('*-'.repeat(20))
+    console.log('Received message on topic:', topic)
+    console.table({ sensor, status, timestamp: timestamp.toLocaleString() })
 
     // Save to database
     await prisma.sensor.update({ where: { sensor }, data: { status } })
-
-    // Show all sensors
-    const sensors = await prisma.sensor.findMany()
-    // show only the sensor and status
-    console.table(sensors.map(({ sensor, status }) => ({ sensor, status })))
 }
+
+setInterval(() => {
+    if (queue.size === 0) return
+    queue.forEach(async (message, topic) => {
+        await processBrokerData(message)
+        queue.delete(topic)
+    })
+}, messageInterval)
