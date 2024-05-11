@@ -7,6 +7,7 @@ const envSchema = zod.object({
     PORT: zod.string().default('8080'),
     DATABASE_URL: zod.string().url(),
     MQTT_URL: zod.string().url().default("mqtt://broker.emqx.io"),
+    MQTT_TOPIC: zod.string().default('smartparking-iot'),
 })
 
 export type Env = zod.infer<typeof envSchema>
