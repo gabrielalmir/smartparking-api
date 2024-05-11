@@ -51,13 +51,38 @@ async function processBrokerData(brokerMessage: BrokerMessage) {
 
     const { sensor, status } = schema.parse(JSON.parse(message.toString()))
 
-    // Log parsed message
-    console.log('*-'.repeat(20))
-    console.log('Received message on topic:', topic)
-    console.table({ sensor, status, timestamp: timestamp.toLocaleString() })
-
     // Save to database
-    await prisma.sensor.update({ where: { sensor }, data: { status } })
+    const sensorRecord = await saveSensorData(sensor, status)
+    console.table({ topic, sensor, status, timestamp: timestamp.toLocaleString() })
+
+    // Save sensor movement
+    const sensorId = sensorRecord.id
+    await saveSensorMovement({ id: sensorId, status, sensor })
+}
+
+async function saveSensorData(sensor: string, status: boolean) {
+    const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
+    return record
+}
+
+async function saveSensorMovement({ id, status, sensor }: { id: number, status: boolean, sensor: string }) {
+    // Check if last record was an entry
+    const lastRecord = await prisma.sensorMov.findFirst({
+        where: { sensorId: id, completed: false },
+        orderBy: { entryDateTime: 'desc' }
+    })
+
+    // Save sensor movement
+    if (!lastRecord || !lastRecord.entryDateTime && status) {
+        await prisma.sensorMov.create({ data: { sensorId: id } })
+    } else {
+        if (status) return // Ignore if status still true
+
+        await prisma.sensorMov.update({
+            where: { id: lastRecord?.id },
+            data: { exitDateTime: new Date(), completed: true }
+        })
+    }
 }
 
 setInterval(() => {
@@ -67,3 +92,4 @@ setInterval(() => {
         queue.delete(topic)
     })
 }, messageInterval)
+
