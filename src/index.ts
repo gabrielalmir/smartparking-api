@@ -5,15 +5,12 @@ import { env } from './config/env'
 
 const client = mqtt.connect(env.MQTT_URL)
 const topic = env.MQTT_TOPIC
-const messageInterval = env.MESSAGE_INTERVAL
 
 interface BrokerMessage {
     topic: string
     message: Buffer
     timestamp: Date
 }
-
-const queue = new Map<string, BrokerMessage>()
 
 client.on('connect', () => {
     console.log('Connected to MQTT broker')
@@ -23,7 +20,7 @@ client.on('connect', () => {
 
 client.on('message', async (topic, message) => {
     try {
-        addMessageToQueue({ topic, message, timestamp: new Date() })
+        processBrokerData({ message, topic, timestamp: new Date() })
     } catch (error) {
         if (error instanceof z.ZodError) {
             console.error('Error processing message:', error.errors.map((e) => e.message))
@@ -36,10 +33,6 @@ client.on('message', async (topic, message) => {
     }
 })
 
-function addMessageToQueue(brokerMessage: BrokerMessage) {
-    const { topic } = brokerMessage
-    queue.set(topic, brokerMessage)
-}
 
 async function processBrokerData(brokerMessage: BrokerMessage) {
     const { topic, message, timestamp } = brokerMessage
@@ -84,12 +77,4 @@ async function saveSensorMovement({ id, status }: { id: number, status: boolean 
         })
     }
 }
-
-setInterval(() => {
-    if (queue.size === 0) return
-    queue.forEach(async (message, topic) => {
-        await processBrokerData(message)
-        queue.delete(topic)
-    })
-}, messageInterval)
 
