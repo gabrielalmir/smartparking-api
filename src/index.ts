@@ -12,6 +12,9 @@ interface BrokerMessage {
     timestamp: Date
 }
 
+const messageQueue: BrokerMessage[] = []
+const uniqueMessages = new Set<string>()
+
 client.on('connect', () => {
     console.log('Connected to MQTT broker')
     console.log('*-'.repeat(20))
@@ -19,20 +22,38 @@ client.on('connect', () => {
 })
 
 client.on('message', async (topic, message) => {
-    try {
-        processBrokerData({ message, topic, timestamp: new Date() })
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            console.error('Error processing message:', error.errors.map((e) => e.message))
-        }
-        else if (error instanceof SyntaxError) {
-            console.error('Error processing message:', 'Invalid JSON format')
-        } else {
-            console.error('Error processing message:', error)
-        }
+    const brokerMessage: BrokerMessage = { topic, message, timestamp: new Date() }
+    const messageKey = `${topic}-${message.toString()}`
+
+    // Add message to queue if it's not already present
+    if (!uniqueMessages.has(messageKey)) {
+        uniqueMessages.add(messageKey)
+        messageQueue.push(brokerMessage)
     }
 })
 
+// Process the queue every second, removing duplicates before processing
+setInterval(async () => {
+    if (messageQueue.length === 0) return
+
+    const processingQueue = [...messageQueue]
+    messageQueue.length = 0
+    uniqueMessages.clear()
+
+    for (const brokerMessage of processingQueue) {
+        try {
+            await processBrokerData(brokerMessage)
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                console.error('Error processing message:', error.errors.map((e) => e.message))
+            } else if (error instanceof SyntaxError) {
+                console.error('Error processing message:', 'Invalid JSON format')
+            } else {
+                console.error('Error processing message:', error)
+            }
+        }
+    }
+}, 1000)
 
 async function processBrokerData(brokerMessage: BrokerMessage) {
     const { topic, message, timestamp } = brokerMessage
@@ -77,4 +98,3 @@ async function saveSensorMovement({ id, status }: { id: number, status: boolean 
         })
     }
 }
-
