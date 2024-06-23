@@ -66,17 +66,29 @@ async function processBrokerData(brokerMessage: BrokerMessage) {
     const { sensor, status } = schema.parse(JSON.parse(message.toString()))
 
     // Save to database
-    const sensorRecord = await saveSensorData(sensor, status)
-    console.table({ topic, sensor, status, timestamp: timestamp.toLocaleString() })
+    try {
+        const sensorRecord = await saveSensorData(sensor, status)
+        console.table({ topic, sensor, status, timestamp: timestamp.toLocaleString() })
 
-    // Save sensor movement
-    const sensorId = sensorRecord.id
-    await saveSensorMovement({ id: sensorId, status })
+        // Save sensor movement
+        const sensorId = sensorRecord.id
+        await saveSensorMovement({ id: sensorId, status })
+    } catch (error: any) {
+        if (error instanceof PrismaNotFoundError) {
+            console.error(`Error processing message: ${error.message}`)
+        } else {
+            throw error
+        }
+    }
 }
 
 async function saveSensorData(sensor: string, status: boolean) {
-    const record = await prisma.sensor.update({ where: { sensor }, data: { status } })
-    return record
+    try {
+        const record = await prisma.sensor.update({ where: { sensor, available: true }, data: { status } })
+        return record
+    } catch (error) {
+        throw new PrismaNotFoundError(`Sensor ${sensor} not found, or is not available`)
+    }
 }
 
 async function saveSensorMovement({ id, status }: { id: number, status: boolean }) {
@@ -96,5 +108,12 @@ async function saveSensorMovement({ id, status }: { id: number, status: boolean 
             where: { id: lastRecord?.id },
             data: { exitDateTime: new Date(), completed: true }
         })
+    }
+}
+
+class PrismaNotFoundError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'PrismaNotFoundError'
     }
 }
